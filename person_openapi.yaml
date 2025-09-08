@@ -1,246 +1,300 @@
-openapi: 3.0.3
+openapi: 3.0.1
 info:
-  title: Person API
-  description: API för att hantera persondata och integrera med Skatteverket.
-  version: 1.0.0
+  title: Person
+  version: 0.1.0
 servers:
-  - url: http://localhost:8080
+- url: "{server}:{port}/person"
+  variables:
+    server:
+      default: http://localhost
+    port:
+      default: "8080"
 paths:
   /hamtaTokenAndGUIDAndPerson:
     get:
-      summary: Hämta token, GUID och persondata från SKV
+      operationId: getHamtatokenandguidandperson
       parameters:
-        - name: personNr
-          in: query
-          required: true
-          schema:
-            type: string
+      - name: personNr
+        in: query
+        required: true
+        schema:
+          type: string
       responses:
-        '200':
-          description: Framgångsrikt hämtad person
+        "200":
+          description: Ok
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  status:
-                    type: integer
-                  guid:
-                    type: string
-                  token:
-                    type: string
-                  person:
-                    type: object
-        '500':
-          description: Fel vid hämtning
+        "400":
+          description: BadRequest
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: integer
-                  message:
-                    type: string
-                  detail:
-                    type: string
+                $ref: '#/components/schemas/ErrorPayload'
   /checkEnv:
     get:
-      summary: Kontrollera vilken miljö som körs
+      operationId: getCheckenv
       responses:
-        '200':
-          description: Miljöinformation
+        "200":
+          description: Ok
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  environment:
-                    type: string
-                  variable:
-                    type: string
-                  value:
-                    type: string
-  /hamtaPerson/{id}:
+  /hamtaPerson:
     get:
-      summary: Hämta en person via id
+      operationId: getHamtaperson
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
       responses:
-        '200':
-          description: Person hämtad
+        "200":
+          description: Ok
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/person'
-  /hamtaAllaPersonerSortByIdAsc:
-    get:
-      summary: Hämta alla personer sorterade på id
-      responses:
-        '200':
-          description: Lista över personer
+                type: object
+        "400":
+          description: BadRequest
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/person'
-  /hamtaAllaPersonerSortByEfternamnAsc:
-    get:
-      summary: Hämta alla personer sorterade på efternamn
-      responses:
-        '200':
-          description: Lista över personer
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/person'
+                $ref: '#/components/schemas/ErrorPayload'
   /skapaPerson:
     post:
-      summary: Skapa en ny person
+      operationId: postSkapaperson
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/person'
+        required: true
       responses:
-        '200':
-          description: Person skapad
+        "201":
+          description: Created
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  message:
-                    type: string
-                  id:
-                    type: integer
-  /uppdateraPerson/{id}:
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /hamtaAllaPersonerSortByIdAsc:
+    get:
+      operationId: getHamtaallapersonersortbyidasc
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+  /hamtaAllaPersonerSortByEfternamnAsc:
+    get:
+      operationId: getHamtaallapersonersortbyefternamnasc
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+  /uppdateraPerson:
     put:
-      summary: Uppdatera en befintlig person
+      operationId: putUppdateraperson
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
+      - name: id
+        in: query
         required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/person'
+        required: true
       responses:
-        '200':
-          description: Person uppdaterad
+        "200":
+          description: Ok
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  message:
-                    type: string
-                  id:
-                    type: integer
-  /tabortPerson/{id}:
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /tabortPerson:
     delete:
-      summary: Ta bort en person
+      operationId: deleteTabortperson
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
       responses:
-        '200':
-          description: Person borttagen
+        "200":
+          description: Ok
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  message:
-                    type: string
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
   /hamtaPersonByPersonnummer:
     get:
-      summary: Hämta en person via personnummer
+      operationId: getHamtapersonbypersonnummer
       parameters:
-        - name: idBet
-          in: query
-          required: true
-          schema:
-            type: string
+      - name: idBet
+        in: query
+        required: true
+        schema:
+          type: string
       responses:
-        '200':
-          description: Person hämtad
+        "200":
+          description: Ok
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/person'
-
+                type: object
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
 components:
   schemas:
+    ErrorPayload:
+      required:
+      - message
+      - method
+      - path
+      - reason
+      - status
+      - timestamp
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int64
+        reason:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        method:
+          type: string
     person:
+      required:
+      - efternamn
+      - epostadress
+      - fornamn
+      - idbet
+      - land
+      - lastevent
+      - merkontakt
+      - mobilnr
+      - motpart
+      - motpartid
+      - organisation
+      - postnr
+      - postort
+      - skapaddatum
+      - telnr
+      - typavidbet
+      - uppdateraddatum
+      - utdelningsadress1
       type: object
       properties:
         id:
           type: integer
-        careOf:
-          type: string
+          format: int64
         utdelningsadress1:
           type: string
-        utdelningsadress2:
+          nullable: true
+        postnr:
           type: string
-        postNr:
+          nullable: true
+        postort:
           type: string
-        postOrt:
+          nullable: true
+        fornamn:
           type: string
-        forNamn:
+          nullable: true
+        efternamn:
           type: string
-        mellanNamn:
+          nullable: true
+        typavidbet:
           type: string
-        efterNamn:
+          nullable: true
+        idbet:
           type: string
-        aviseringsNamn:
+          nullable: true
+        skapaddatum:
           type: string
-        code:
+          nullable: true
+        uppdateraddatum:
           type: string
-        kodTilltalsNamn:
-          type: string
-        lan:
-          type: string
-        kommun:
-          type: string
-        forsamling:
-          type: string
-        folkBokforingsDatum:
-          type: string
-        folkBokforingsTyp:
-          type: string
-        typAvIdBet:
-          type: string
-        idBet:
-          type: string
-        hanvisningsNummer:
-          type: string
-        sekretessMark:
-          type: string
-        skyddadFolkBokforing:
-          type: string
-        skapadDatum:
-          type: string
-        uppdateradDatum:
-          type: string
+          nullable: true
         lastevent:
           type: string
+          nullable: true
+        motpart:
+          type: string
+          nullable: true
+        organisation:
+          type: string
+          nullable: true
+        motpartid:
+          type: string
+          nullable: true
+        land:
+          type: string
+          nullable: true
+        merkontakt:
+          type: string
+          nullable: true
+        telnr:
+          type: string
+          nullable: true
+        mobilnr:
+          type: string
+          nullable: true
+        epostadress:
+          type: string
+          nullable: true
+      additionalProperties: false

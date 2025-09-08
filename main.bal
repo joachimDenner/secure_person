@@ -8,30 +8,24 @@ import ballerina/uuid;
 
 type person record {|
     int id?;
-    string? careOf;
     string? utdelningsadress1;
-    string? utdelningsadress2;
-    string? postNr;
-    string? postOrt;
-    string? forNamn;
-    string? mellanNamn;
-    string? efterNamn;
-    string? aviseringsNamn;
-    string? code;
-    string? kodTilltalsNamn;
-    string? lan;
-    string? kommun;
-    string? forsamling;
-    string? folkBokforingsDatum;
-    string? folkBokforingsTyp;
-    string? typAvIdBet;
-    string? idBet;
-    string? hanvisningsNummer;
-    string? sekretessMark;
-    string? skyddadFolkBokforing;
-    string? skapadDatum;
-    string? uppdateradDatum;
+    string? postnr;
+    string? postort;
+    string? fornamn;
+    string? efternamn;
+    string? typavidbet;
+    string? idbet;
+    string? skapaddatum;
+    string? uppdateraddatum;
     string? lastevent;
+    string? motpart;
+    string? organisation;
+    string? motpartid;
+    string? land;
+    string? merkontakt;
+    string? telnr;
+    string? mobilnr;
+    string? epostadress;
 |};
 
 // Databaskoppling
@@ -190,60 +184,46 @@ service /person on new http:Listener(8080) {
         return <json>resultList;
     }
 
-   // Skapa (POST) en ny person
+    // Skapa (POST) en ny person
     resource function post skapaPerson(person pers) returns json|error {
         sql:ParameterizedQuery query = `INSERT INTO person (
-                careof,
                 utdelningsadress1,
-                utdelningsadress2,
                 postnr,
                 postort,
                 fornamn,
-                mellannamn,
                 efternamn,
-                aviseringsnamn,
-                code,
-                kodtilltalsnamn,
-                lan,
-                kommun,
-                forsamling,
-                folkbokforingsdatum,
-                folkbokforingstyp,
                 typavidbet,
                 idbet,
-                hanvisningsnummer,
-                sekretessmark,
-                skyddadfolkbokforing,
                 skapaddatum,
                 uppdateraddatum,
-                lastevent
+                lastevent,
+                motpart,
+                organisation,
+                motpartid,
+                land,
+                merkontakt,
+                telnr,
+                mobilnr,
+                epostadress
             ) VALUES (
-                /*
-                ${pers.code},
-                ${pers.kodTilltalsNamn},
-                ${pers.lan},
-                ${pers.kommun},
-                ${pers.forsamling},
-                ${pers.folkBokforingsDatum},
-                ${pers.folkBokforingsTyp},
-                ${pers.typAvIdBet},
-                ${pers.idBet},
-                ${pers.hanvisningsNummer},
-                ${pers.sekretessMark},
-                ${pers.skyddadFolkBokforing},
-                ${pers.skapadDatum},
-                ${pers.uppdateradDatum}
-                */
-                ${pers.folkBokforingsDatum},
-                ${pers.folkBokforingsTyp},
-                ${pers.typAvIdBet},
-                ${pers.idBet},
-                ${pers.hanvisningsNummer},
-                ${pers.sekretessMark},
-                ${pers.skyddadFolkBokforing},
-                ${pers.skapadDatum},
-                ${pers.uppdateradDatum},
-                ${pers.lastevent}
+                ${pers.utdelningsadress1},
+                ${pers.postnr},
+                ${pers.postort},
+                ${pers.fornamn},
+                ${pers.efternamn},
+                ${pers.typavidbet},
+                ${pers.idbet},
+                ${pers.skapaddatum},
+                ${pers.uppdateraddatum},
+                ${pers.lastevent},
+                ${pers.motpart},
+                ${pers.organisation},
+                ${pers.motpartid},
+                ${pers.land},
+                ${pers.merkontakt},
+                ${pers.telnr},
+                ${pers.mobilnr},
+                ${pers.epostadress}
             ) RETURNING id`;
 
         int insertedId = check dbClient->queryRow(query, int);
@@ -258,7 +238,6 @@ service /person on new http:Listener(8080) {
             };
         }
     }
-
 
     //   Hämta (GET) alla personer by id
     resource function get hamtaAllaPersonerSortByIdAsc() returns json {
@@ -299,29 +278,23 @@ service /person on new http:Listener(8080) {
     // Uppdatera (PUT) en person
     resource function put uppdateraPerson(int id, person pers) returns json|error {
     sql:ParameterizedQuery query = `UPDATE person SET
-        careof = ${pers.careOf},
         utdelningsadress1 = ${pers.utdelningsadress1},
-        utdelningsadress2 = ${pers.utdelningsadress2},
-        postnr = ${pers.postNr},
-        postort = ${pers.postOrt},
-        fornamn = ${pers.forNamn},
-        mellannamn = ${pers.mellanNamn},
-        efternamn = ${pers.efterNamn},
-        aviseringsnamn = ${pers.aviseringsNamn},
-        code = ${pers.code},
-        kodtilltalsnamn = ${pers.kodTilltalsNamn},
-        lan = ${pers.lan},
-        kommun = ${pers.kommun},
-        forsamling = ${pers.forsamling},
-        folkbokforingsdatum = ${pers.folkBokforingsDatum},
-        folkbokforingstyp = ${pers.folkBokforingsTyp},
-        typavidbet = ${pers.typAvIdBet},
-        idbet = ${pers.idBet},
-        hanvisningsnummer = ${pers.hanvisningsNummer},
-        sekretessmark = ${pers.sekretessMark},
-        skyddadfolkbokforing = ${pers.skyddadFolkBokforing},
-        uppdateraddatum = ${pers.uppdateradDatum},
-        lastevent = ${pers.lastevent}
+        postnr = ${pers.postnr},
+        postort = ${pers.postort},
+        fornamn = ${pers.fornamn},
+        efternamn = ${pers.efternamn},
+        typavidbet = ${pers.typavidbet},
+        idbet = ${pers.idbet},
+        uppdateraddatum = ${pers.uppdateraddatum},
+        lastevent = ${pers.lastevent},
+        motpart = ${pers.motpart},
+        organisation = ${pers.organisation},
+        motpartid = ${pers.motpartid},
+        land = ${pers.land},
+        merkontakt = ${pers.merkontakt},
+        telnr = ${pers.telnr},
+        mobilnr = ${pers.mobilnr},
+        epostadress = ${pers.epostadress}
         WHERE id = ${id}`;
 
         sql:ExecutionResult result = check dbClient->execute(query);
