@@ -1,6 +1,6 @@
 [package]
 org = "joachimdenner"
-name = "rest_api_person"
+name = "rest_api_secure_person"
 version = "0.1.0"
 distribution = "2201.12.7"
 
