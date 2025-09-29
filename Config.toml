@@ -4,15 +4,3 @@ PORT = 5432
 USER = "neondb_owner"
 PASSWORD = "npg_hgGofDq81sXy"
 DATABASE = "my_test_db_in_neon"
-
-# Steg 1 - SKV Token variabler
-SKV_TOKEN_URL = "https://sysorgoauth2.test.skatteverket.se/oauth2/v1/sysorg/token"
-SKV_TOKEN_CLIENT_ID = "a00b962dfdc8e743eebcf407c38ecead83bd69f7202e2f68"
-SKV_TOKEN_CLIENT_SECRET = "da21079d64e9740442deb79c08f0041692fc6edac949cead83bd69f7202e2f68"
-SKV_TOKEN_CERTFILE = "c:/projcerts/orebrokommun/client-cert.crt"
-SKV_TOKEN_KEYFILE = "c:/projcerts/orebrokommun/client-key.key"
-
-# Steg 2 - SKV API variabler
-SKV_API_URL = "https://api.test.skatteverket.se/folkbokforing/folkbokforingsuppgifter-for-offentliga-aktorer/v3/hamta"
-SKV_API_CLIENT_ID = "c7b3346b-06fe-4e48-8a9e-bb8bed786c8a"
-SKV_API_CLIENT_SECRET = "a0562b37-8514-47b4-952e-d53f0499c054"
