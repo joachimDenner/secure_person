@@ -1,80 +1,134 @@
-openapi: 3.0.1
+openapi: 3.0.0
 info:
-  title: Secure Person
-  version: 0.1.0
+  title: Secure Person API
+  version: 1.0.0
+  description: API för att hantera krypterade personuppgifter med AES-kryptering
+
 servers:
-- url: "{server}:{port}/secure_person"
-  variables:
-    server:
-      default: http://localhost
-    port:
-      default: "8081"
+  - url: http://localhost:8081
+
 paths:
-  /skapaKrypteradPerson:
+  /secure_person/skapaKrypteradPerson:
     post:
-      operationId: postSkapakrypteradperson
-      parameters:
-      - name: persnr
-        in: query
+      summary: Skapa en ny krypterad person
+      requestBody:
         required: true
-        schema:
-          type: string
-      - name: secretKey
-        in: query
-        required: true
-        schema:
-          type: string
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecurePerson'
       responses:
-        "201":
-          description: Created
+        '200':
+          description: Skapad person
           content:
             application/json:
               schema:
                 type: object
-        "500":
-          description: InternalServerError
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-        "400":
-          description: BadRequest
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorPayload'
-  /hamtaAllaKrypteradePersonerUtanNyckel:
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: integer
+        '400':
+          description: Fel vid skapande
+
+  /secure_person/hamtaAllaKrypteradePersonerUtanNyckel:
     get:
-      operationId: getHamtaallakrypteradepersonerutannyckel
+      summary: Hämta alla krypterade personer utan secret key
       responses:
-        "200":
-          description: Ok
+        '200':
+          description: Lista med personer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SecurePerson'
+
+  /secure_person/krypteraEttInputVarde:
+    get:
+      summary: Kryptera ett värde med secret key
+      parameters:
+        - name: normaltVarde
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: secretKey
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Krypterat värde
           content:
             application/json:
               schema:
                 type: object
+                properties:
+                  success:
+                    type: boolean
+                  encryptedValue:
+                    type: string
+                    nullable: true
+                  errorMessage:
+                    type: string
+                    nullable: true
+
+  /secure_person/dekrypteraEttInputVarde:
+    get:
+      summary: Dekryptera ett värde med secret key
+      parameters:
+        - name: krypteratVarde
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: secretKey
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dekrypterat värde
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  decryptedValue:
+                    type: string
+                    nullable: true
+                  errorMessage:
+                    type: string
+                    nullable: true
+
 components:
   schemas:
-    ErrorPayload:
-      required:
-      - message
-      - method
-      - path
-      - reason
-      - status
-      - timestamp
+    SecurePerson:
       type: object
       properties:
-        timestamp:
-          type: string
-        status:
+        id:
           type: integer
-          format: int64
-        reason:
+        persnr:
           type: string
-        message:
+        krypterat_persnr:
           type: string
-        path:
+        fornamn:
           type: string
-        method:
+        krypterat_fornamn:
+          type: string
+        efternamn:
+          type: string
+        krypterat_efternamn:
+          type: string
+        secret_key:
+          type: string
+        skapad:
+          type: string
+        uppdaterad:
           type: string
