@@ -19,6 +19,32 @@ public type SecurePerson record {|
     string? uppdaterad;
 |};
 
+public type SecurePersonKrypteradeFalt record {|
+    int id?;
+    string? krypterat_persnr;
+    string? krypterat_fornamn;
+    string? krypterat_efternamn;
+    string? skapad;
+    string? uppdaterad;
+|};
+
+public type SecurePersonDekrypteradeFalt record {|
+    int id?;
+    string? dekrypterat_persnr;
+    string? dekrypterat_fornamn;
+    string? dekrypterat_efternamn;
+    string? secret_key;
+    string? skapad;
+    string? uppdaterad;
+|};
+
+// Endast för intern felhantering
+type EncryptAndDecryptResult record {|
+    boolean success;
+    string? encryptedValue;
+    string? decryptedValue;
+    string? errorMessage;
+|};
 
 // Databaskoppling
 configurable string USER = ?;
@@ -43,15 +69,72 @@ final postgresql:Client dbClient = check new postgresql:Client(
 
 service /secure_person on new http:Listener(8081) {
     resource function post skapaKrypteradPerson(SecurePerson secureperson) returns json|error {
+        
+        string? encryptPersnr = null;
+        string? encryptFornamn = null;
+        string? encryptEfternamn = null;
+
+        //--- Kryptera fält efter fält
+        if secureperson.persnr != () && secureperson.persnr != "" && secureperson.persnr != "{?}" {
+            EncryptAndDecryptResult krypteratPersnr = encryptTextAsJson(secureperson.persnr.toString(), secureperson.secret_key.toString());
+            if !krypteratPersnr.success {
+                return {
+                    success: krypteratPersnr.success,
+                    column: "persnr=" + secureperson.persnr.toString(),
+                    encryptedValue: krypteratPersnr.encryptedValue,
+                    decryptedValue: krypteratPersnr.decryptedValue,
+                    errorMessage: krypteratPersnr.errorMessage
+                };
+            }
+            encryptPersnr = krypteratPersnr.encryptedValue.toString();
+        }
+        
+        if secureperson.fornamn != () && secureperson.fornamn != "" && secureperson.fornamn != "{?}" {
+            EncryptAndDecryptResult krypteratFornamn = encryptTextAsJson(secureperson.fornamn.toString(), secureperson.secret_key.toString());
+            if !krypteratFornamn.success {
+                return {
+                    success: krypteratFornamn.success,
+                    column: "fornamn=" + secureperson.fornamn.toString(),
+                    encryptedValue: krypteratFornamn.encryptedValue,
+                    decryptedValue: krypteratFornamn.decryptedValue,
+                    errorMessage: krypteratFornamn.errorMessage
+                };
+            }
+            encryptFornamn = krypteratFornamn.encryptedValue.toString();
+        }
+
+        if secureperson.efternamn != () && secureperson.efternamn != "" && secureperson.efternamn != "{?}" {
+            EncryptAndDecryptResult krypteratEfternamn = encryptTextAsJson(secureperson.efternamn.toString(), secureperson.secret_key.toString());
+            if !krypteratEfternamn.success {
+                return {
+                    success: krypteratEfternamn.success,
+                    column: "efternamn=" + secureperson.efternamn.toString(),
+                    encryptedValue: krypteratEfternamn.encryptedValue,
+                    decryptedValue: krypteratEfternamn.decryptedValue,
+                    errorMessage: krypteratEfternamn.errorMessage
+                };
+            }
+            encryptEfternamn = krypteratEfternamn.encryptedValue.toString();
+        }
+
         sql:ParameterizedQuery query = `INSERT INTO secure_person (
                 persnr,
                 krypterat_persnr,
+                fornamn,
+                krypterat_fornamn,
+                efternamn,
+                krypterat_efternamn,
                 secret_key
             ) VALUES (
                 ${secureperson.persnr},
-                ${secureperson.krypterat_persnr},
+                ${encryptPersnr.toString()},
+                ${secureperson.fornamn},
+                ${encryptFornamn.toString()},
+                ${secureperson.efternamn},
+                ${encryptEfternamn.toString()},
                 ${secureperson.secret_key}
             ) RETURNING id`;
+
 
         int insertedId = check dbClient->queryRow(query, int);
         if insertedId > 0 {
@@ -66,8 +149,8 @@ service /secure_person on new http:Listener(8081) {
         }
     }
 
-    //   Hämta (GET) alla krypterade personer utan secret key
-    resource function get hamtaAllaKrypteradePersonerUtanNyckel() returns json {
+    //   Hämta (GET) alla personer
+    resource function get hamtaAllaPersoner() returns json {
         
         sql:ParameterizedQuery query = `SELECT * FROM secure_person order by id asc`;
         stream<SecurePerson, error?> resultStream = dbClient->query(query);
@@ -78,7 +161,81 @@ service /secure_person on new http:Listener(8081) {
 
         if e is error {
             return {
-                "message": "Kunde inte hämta krypterade personer: " + e.message()
+                "message": "Kunde inte hämta personer: " + e.message()
+            };
+        }
+        return <json>resultList;
+    }
+
+    //   Hämta (GET) alla krypterade värden för personer
+    resource function get hamtaAllaKrypteradeFaltForPersonerKrypterat() returns json {
+        
+        sql:ParameterizedQuery query = `SELECT 
+            id, 
+            krypterat_persnr, 
+            krypterat_fornamn, 
+            krypterat_efternamn, 
+            skapad, 
+            uppdaterad	
+        FROM secure_person order by id asc`;
+
+        stream<SecurePersonKrypteradeFalt, error?> resultStream = dbClient->query(query);
+        SecurePersonKrypteradeFalt[] resultList = [];
+        error? e = resultStream.forEach(function(SecurePersonKrypteradeFalt row) {
+            resultList.push(row);
+        });
+
+        if e is error {
+            return {
+                "message": "Kunde inte hämta krypterade fält för personer: " + e.message()
+            };
+        }
+        return <json>resultList;
+    }
+
+    //   Hämta (GET) alla krypterade värden för personer och dekryptera dem med nyckel
+    resource function get hamtaAllaKrypteradeFaltForPersonerDekrypterat(string secretKey) returns json {
+        
+         // --- Säkerställ att nyckeln är 16 bytes (AES-128) ---
+        if secretKey.length() != 16 {
+            return {
+                success: false,
+                errorMessage: "secretKey måste vara 16 tkn lång!"
+            };
+        }
+    
+        sql:ParameterizedQuery query = `SELECT 
+            id, 
+            krypterat_persnr as dekrypterat_persnr, 
+            krypterat_fornamn as dekrypterat_fornamn, 
+            krypterat_efternamn as dekrypterat_efternamn,
+            secret_key, 
+            skapad, 
+            uppdaterad	
+        FROM secure_person order by id asc`;
+
+        stream<SecurePersonDekrypteradeFalt, error?> resultStream = dbClient->query(query);
+        SecurePersonDekrypteradeFalt[] resultList = [];
+        error? e = resultStream.forEach(function(SecurePersonDekrypteradeFalt row) {
+
+            if row.dekrypterat_persnr != () && row.dekrypterat_persnr != "" {
+                EncryptAndDecryptResult dekrypteratPersnr = decryptTextAsJson(row.dekrypterat_persnr.toString(), secretKey.toString());
+                row.dekrypterat_persnr = dekrypteratPersnr.decryptedValue;
+            }
+            if row.dekrypterat_fornamn != () && row.dekrypterat_fornamn != "" {
+                EncryptAndDecryptResult dekrypteratFornamn = decryptTextAsJson(row.dekrypterat_fornamn.toString(), secretKey.toString());
+                row.dekrypterat_fornamn = dekrypteratFornamn.decryptedValue;
+            }
+            if row.dekrypterat_efternamn != () && row.dekrypterat_efternamn != "" {
+                EncryptAndDecryptResult dekrypteratEfternamn = decryptTextAsJson(row.dekrypterat_efternamn.toString(), secretKey.toString());
+                row.dekrypterat_efternamn = dekrypteratEfternamn.decryptedValue;
+            }
+            resultList.push(row);
+        });
+
+        if e is error {
+            return {
+                "message": "Kunde inte hämta krypterade fält för personer: " + e.message()
             };
         }
         return <json>resultList;
@@ -96,13 +253,14 @@ service /secure_person on new http:Listener(8081) {
 }
 
 // Krypterar en text och returnerar alltid ett JSON-objekt
-function encryptTextAsJson(string normaltVarde, string secretKey) returns json {
+function encryptTextAsJson(string normaltVarde, string secretKey) returns EncryptAndDecryptResult {
 
     // --- Säkerställ att nyckeln är 16 bytes (AES-128) ---
     if secretKey.length() != 16 {
         return {
             success: false,
             encryptedValue: null,
+            decryptedValue: null,
             errorMessage: "secretKey måste vara 16 tkn lång!"
         };
     }
@@ -112,29 +270,43 @@ function encryptTextAsJson(string normaltVarde, string secretKey) returns json {
         return {
             success: true,
             encryptedValue: encryptedResult,
+            decryptedValue: "N/A",
             errorMessage: null
         };
     } else {
         return {
             success: false,
             encryptedValue: null,
+            decryptedValue: null,
             errorMessage: encryptedResult.message()
         };
     }
 }
 
 // Dekrypterar en base64-kodad text och returnerar alltid ett JSON-objekt
-function decryptTextAsJson(string krypteratVarde, string secretKey) returns json {
+function decryptTextAsJson(string krypteratVarde, string secretKey) returns EncryptAndDecryptResult {
+     // --- Säkerställ att nyckeln är 16 bytes (AES-128) ---
+    if secretKey.length() != 16 {
+        return {
+            success: false,
+            encryptedValue: null,
+            decryptedValue: null,
+            errorMessage: "secretKey måste vara 16 tkn lång!"
+        };
+    }
+
     var decryptedResult = decryptText(krypteratVarde, secretKey);
     if (decryptedResult is string) {
         return {
             success: true,
+            encryptedValue: "N/A",
             decryptedValue: decryptedResult,
             errorMessage: null
         };
     } else {
         return {
             success: false,
+            encryptedValue: null,
             decryptedValue: null,
             errorMessage: decryptedResult.message()
         };
